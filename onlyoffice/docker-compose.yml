@@ -1,0 +1,166 @@
+# docker-compose.yml
+version: '3.8'
+
+services:
+  # OnlyOffice Document Server
+  onlyoffice-documentserver:
+    image: onlyoffice/documentserver:latest
+    container_name: onlyoffice-documentserver
+    ports:
+      - "${ONLYOFFICE_PORT:-8081}:80"
+    environment:
+      - JWT_ENABLED=true
+      - JWT_SECRET=${ONLYOFFICE_JWT_SECRET}
+      - JWT_HEADER=AuthorizationJwt
+      - DB_TYPE=postgres
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=${POSTGRES_ONLYOFFICE_DB}
+      - DB_USER=${POSTGRES_ONLYOFFICE_USER}
+      - DB_PWD=${POSTGRES_ONLYOFFICE_PASSWORD}
+      - REDIS_SERVER_HOST=redis
+      - REDIS_SERVER_PORT=6379
+    volumes:
+      - onlyoffice_data:/var/www/onlyoffice/Data
+      - onlyoffice_logs:/var/log/onlyoffice
+      - onlyoffice_cache:/var/lib/onlyoffice
+    depends_on:
+      - postgres
+      - redis
+    restart: unless-stopped
+    networks:
+      - eform-network
+
+  # PostgreSQL Database
+  postgres:
+    image: postgres:13-alpine
+    container_name: eform-postgres
+    environment:
+      - POSTGRES_DB=${POSTGRES_EFORM_DB}
+      - POSTGRES_USER=${POSTGRES_EFORM_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_EFORM_PASSWORD}
+      # Additional databases for OnlyOffice
+      - POSTGRES_MULTIPLE_DATABASES=${POSTGRES_ONLYOFFICE_DB}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-multiple-databases.sh:/docker-entrypoint-initdb.d/init-multiple-databases.sh
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    restart: unless-stopped
+    networks:
+      - eform-network
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: eform-redis
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    networks:
+      - eform-network
+
+  # E-Form Backend
+  # eform-backend:
+  #   build: 
+  #     context: ./backend
+  #     dockerfile: Dockerfile
+  #   container_name: eform-backend
+  #   ports:
+  #     - "${BACKEND_PORT:-8080}:8080"
+  #   environment:
+  #     # Database
+  #     - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/${POSTGRES_EFORM_DB}
+  #     - SPRING_DATASOURCE_USERNAME=${POSTGRES_EFORM_USER}
+  #     - SPRING_DATASOURCE_PASSWORD=${POSTGRES_EFORM_PASSWORD}
+      
+  #     # OnlyOffice
+  #     - ONLYOFFICE_DOCS_URL=http://onlyoffice-documentserver
+  #     - ONLYOFFICE_JWT_SECRET=${ONLYOFFICE_JWT_SECRET}
+  #     - APP_SERVER_URL=${BACKEND_BASE_URL:-http://localhost:8080}
+      
+  #     # File Storage
+  #     - APP_UPLOAD_DIR=/app/uploads
+  #     - APP_OUTPUT_DIR=/app/outputs
+      
+  #     # Redis Cache
+  #     - SPRING_REDIS_HOST=redis
+  #     - SPRING_REDIS_PORT=6379
+      
+  #     # Spring Profile
+  #     - SPRING_PROFILES_ACTIVE=${SPRING_PROFILE:-production}
+  #   volumes:
+  #     - backend_uploads:/app/uploads
+  #     - backend_outputs:/app/outputs
+  #     - backend_logs:/app/logs
+  #   depends_on:
+  #     - postgres
+  #     - redis
+  #     - onlyoffice-documentserver
+  #   restart: unless-stopped
+  #   networks:
+  #     - eform-network
+
+  # E-Form Frontend
+  # eform-frontend:
+  #   build: 
+  #     context: ./frontend
+  #     dockerfile: Dockerfile
+  #   container_name: eform-frontend
+  #   ports:
+  #     - "${FRONTEND_PORT:-3000}:80"
+  #   environment:
+  #     - REACT_APP_API_BASE_URL=${BACKEND_BASE_URL:-http://localhost:8080}/api/v1
+  #     - REACT_APP_ONLYOFFICE_URL=${ONLYOFFICE_BASE_URL:-http://localhost:80}
+  #   depends_on:
+  #     - eform-backend
+  #   restart: unless-stopped
+  #   networks:
+  #     - eform-network
+
+  # Nginx Reverse Proxy (Optional)
+  # nginx:
+  #   image: nginx:alpine
+  #   container_name: eform-nginx
+  #   ports:
+  #     - "${NGINX_HTTP_PORT:-80}:80"
+  #     - "${NGINX_HTTPS_PORT:-443}:443"
+  #   volumes:
+  #     - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+  #     - ./nginx/ssl:/etc/nginx/ssl
+  #     - nginx_logs:/var/log/nginx
+  #   depends_on:
+  #     - eform-frontend
+  #     - eform-backend
+  #     - onlyoffice-documentserver
+  #   restart: unless-stopped
+  #   networks:
+  #     - eform-network
+
+# Volumes
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  onlyoffice_data:
+    driver: local
+  onlyoffice_logs:
+    driver: local
+  onlyoffice_cache:
+    driver: local
+  # backend_uploads:
+  #   driver: local
+  # backend_outputs:
+  #   driver: local
+  # backend_logs:
+  #   driver: local
+  # nginx_logs:
+  #   driver: local
+
+# Networks
+networks:
+  eform-network:
+    driver: bridge

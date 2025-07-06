@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Upload, FileText, Plus, Eye, Download, Edit, Trash2, Save, X } from 'lucide-react';
+import { Upload, FileText, Plus, Eye, Download, Edit, Trash2, Save, X, FileEdit } from 'lucide-react';
+import OnlyOfficeEditor from './OnlyOfficeEditor';
 
-const API_BASE_URL = 'http://localhost:8080/api/v1';
+const API_BASE_URL = 'http://192.168.100.244:8080/api/v1';
 
 const App = () => {
     const [activeTab, setActiveTab] = useState('templates');
@@ -15,11 +16,26 @@ const App = () => {
     const [showFormModal, setShowFormModal] = useState(false);
     const [editingForm, setEditingForm] = useState(null);
 
+    // OnlyOffice states
+    const [showOnlyOfficeEditor, setShowOnlyOfficeEditor] = useState(false);
+    const [editingTemplateId, setEditingTemplateId] = useState(null);
+
     // Load templates and forms on component mount
     useEffect(() => {
         loadTemplates();
         loadForms();
+        testOnlyOfficeConnection();
     }, []);
+
+    const testOnlyOfficeConnection = async () => {
+        try {
+            const response = await fetch(`${API_BASE_URL}/onlyoffice/test`);
+            const result = await response.json();
+            console.log('OnlyOffice connection test:', result);
+        } catch (err) {
+            console.warn('OnlyOffice connection test failed:', err);
+        }
+    };
 
     const loadTemplates = async () => {
         try {
@@ -106,6 +122,26 @@ const App = () => {
         setEditingForm(form);
     };
 
+    // OnlyOffice functions
+    const handleEditTemplate = (templateId) => {
+        setEditingTemplateId(templateId);
+        setShowOnlyOfficeEditor(true);
+    };
+
+    const handleCloseOnlyOffice = () => {
+        setShowOnlyOfficeEditor(false);
+        setEditingTemplateId(null);
+        // Reload templates để cập nhật changes
+        setTimeout(() => {
+            loadTemplates();
+        }, 1000);
+    };
+
+    const handleSaveFromOnlyOffice = () => {
+        console.log('Template saved from OnlyOffice');
+        // OnlyOffice sẽ tự động save qua callback
+    };
+
     const handleSaveForm = async () => {
         if (!formName.trim()) {
             setError('Vui lòng nhập tên form');
@@ -148,12 +184,12 @@ const App = () => {
         }
     };
 
-    const handleGenerateProPdf = async (form) => {
+    const handleGenerateEnhancedPdf = async (form) => {
         try {
             setLoading(true);
             setError('');
 
-            const response = await fetch(`${API_BASE_URL}/forms/${form.id}/generate-pdf-pro`, {
+            const response = await fetch(`${API_BASE_URL}/forms/${form.id}/generate-pdf-enhanced`, {
                 method: 'POST',
             });
 
@@ -162,27 +198,25 @@ const App = () => {
                 const url = window.URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = `pro_${form.name}.pdf`;
+                a.download = `enhanced_${form.name}.pdf`;
                 document.body.appendChild(a);
                 a.click();
                 window.URL.revokeObjectURL(url);
                 document.body.removeChild(a);
-                setError('Tạo PDF Pro thành công!');
+                setError('✅ Tạo PDF cải thiện thành công!');
                 setTimeout(() => setError(''), 3000);
             } else {
-                // Fallback to standard PDF
-                console.warn('PDF failed, trying standard PDF...');
+                console.warn('Enhanced PDF failed, trying standard PDF...');
                 await handleGeneratePdf(form);
             }
         } catch (err) {
-            console.error('PDF error:', err);
-            setError('PDF Pro lỗi, đang thử phương pháp chuẩn...');
+            console.error('Enhanced PDF error:', err);
+            setError('⚠️ PDF cải thiện lỗi, đang thử phương pháp chuẩn...');
 
-            // Fallback to standard PDF
             try {
                 await handleGeneratePdf(form);
             } catch (fallbackErr) {
-                setError('Không thể tạo PDF: ' + fallbackErr.message);
+                setError('❌ Không thể tạo PDF: ' + fallbackErr.message);
             }
         } finally {
             setLoading(false);
@@ -218,9 +252,19 @@ const App = () => {
     };
 
     const handleInputChange = (variableName, value) => {
+        let cleanValue = value;
+        if (typeof value === 'string') {
+            cleanValue = value
+                .replace(/\r\n/g, ' ')
+                .replace(/\n/g, ' ')
+                .replace(/\r/g, ' ')
+                .replace(/\s+/g, ' ')
+                .trim();
+        }
+
         setFormData(prev => ({
             ...prev,
-            [variableName]: value
+            [variableName]: cleanValue
         }));
     };
 
@@ -228,10 +272,23 @@ const App = () => {
         return new Date(dateString).toLocaleString('vi-VN');
     };
 
+    // Render OnlyOffice Editor
+    if (showOnlyOfficeEditor && editingTemplateId) {
+        return (
+            <OnlyOfficeEditor
+                templateId={editingTemplateId}
+                onClose={handleCloseOnlyOffice}
+                onSave={handleSaveFromOnlyOffice}
+            />
+        );
+    }
+
     return (
         <div className="min-h-screen bg-gray-50">
             <div className="max-w-7xl mx-auto py-8 px-4">
-                <h1 className="text-3xl font-bold text-gray-900 mb-8">Hệ thống E-Form</h1>
+                <h1 className="text-3xl font-bold text-gray-900 mb-8">
+                    Hệ thống E-Form với OnlyOffice Integration
+                </h1>
 
                 {error && (
                     <div className={`mb-4 p-4 border rounded ${
@@ -315,13 +372,26 @@ const App = () => {
                                     <p className="text-xs text-gray-500 mb-4">
                                         Tạo: {formatDate(template.createdAt)}
                                     </p>
-                                    <button
-                                        onClick={() => handleCreateForm(template)}
-                                        className="w-full bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 transition-colors"
-                                    >
-                                        <Plus className="inline w-4 h-4 mr-2" />
-                                        Tạo Form
-                                    </button>
+
+                                    {/* Template Actions */}
+                                    <div className="space-y-2">
+                                        <button
+                                            onClick={() => handleEditTemplate(template.id)}
+                                            className="w-full bg-purple-600 text-white py-2 px-4 rounded hover:bg-purple-700 transition-colors"
+                                            title="Chỉnh sửa template với OnlyOffice"
+                                        >
+                                            <FileEdit className="inline w-4 h-4 mr-2" />
+                                            Edit với OnlyOffice
+                                        </button>
+
+                                        <button
+                                            onClick={() => handleCreateForm(template)}
+                                            className="w-full bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 transition-colors"
+                                        >
+                                            <Plus className="inline w-4 h-4 mr-2" />
+                                            Tạo Form
+                                        </button>
+                                    </div>
                                 </div>
                             ))}
                         </div>
@@ -352,9 +422,9 @@ const App = () => {
 
                                     <div className="flex gap-2">
                                         <button
-                                            onClick={() => handleGenerateProPdf(form)}
+                                            onClick={() => handleGenerateEnhancedPdf(form)}
                                             className="flex-1 bg-green-600 text-white py-2 px-3 rounded hover:bg-green-700 transition-colors text-sm"
-                                            title="PDF với format Pro - khắc phục lỗi text bị cắt"
+                                            title="PDF với format cải thiện"
                                         >
                                             <Download className="inline w-4 h-4 mr-1" />
                                             PDF Pro
@@ -393,10 +463,9 @@ const App = () => {
                             </div>
 
                             <div className="p-6">
-                                {/* Thông báo về tính năng auto-clean */}
                                 <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                                     <p className="text-sm text-blue-700">
-                                        💡 <strong>Tính năng mới:</strong> Text sẽ được tự động làm sạch để tránh lỗi format PDF
+                                        💡 <strong>OnlyOffice Integration:</strong> Template có thể được chỉnh sửa trực tiếp với OnlyOffice Editor
                                     </p>
                                 </div>
 

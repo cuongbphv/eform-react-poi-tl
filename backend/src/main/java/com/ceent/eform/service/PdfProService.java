@@ -1,16 +1,15 @@
 package com.ceent.eform.service;
 
-import com.deepoove.poi.XWPFTemplate;
-import com.deepoove.poi.config.Configure;
 import com.ceent.eform.entity.Form;
 import com.ceent.eform.entity.Template;
 import com.ceent.eform.repository.FormRepository;
 import com.ceent.eform.repository.TemplateRepository;
+import com.deepoove.poi.XWPFTemplate;
+import com.deepoove.poi.config.Configure;
 import com.deepoove.poi.config.ConfigureBuilder;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.itextpdf.text.pdf.BaseFont;
-import com.lowagie.text.Font;
 import com.lowagie.text.FontFactory;
 import fr.opensagres.poi.xwpf.converter.pdf.PdfConverter;
 import fr.opensagres.poi.xwpf.converter.pdf.PdfOptions;
@@ -23,7 +22,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 
-import java.io.*;
+import java.io.ByteArrayOutputStream;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
