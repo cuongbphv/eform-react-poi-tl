@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<fontFamilies>
+    <fontFamily name="Times New Roman">
+        <normal><![CDATA[fonts/times.ttf]]></normal>
+        <bold><![CDATA[fonts/timesbd.ttf]]></bold>
+        <italic><![CDATA[fonts/timesi.ttf]]></italic>
+        <bolditalic><![CDATA[fonts/timesbi.ttf]]></bolditalic>
+        <pdfEmbedded><![CDATA[true]]></pdfEmbedded>
+        <pdfEncoding>Identity-H</pdfEncoding>
+        <exportFonts/>
+    </fontFamily>
+</fontFamilies>
+
+
