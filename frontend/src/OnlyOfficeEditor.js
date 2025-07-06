@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Save, X, Download, Eye } from 'lucide-react';
+import { Save, X, Download } from 'lucide-react';
 
 const API_BASE_URL = 'http://192.168.100.244:8080/api/v1';
 

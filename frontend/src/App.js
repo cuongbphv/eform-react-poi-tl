@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Upload, FileText, Plus, Eye, Download, Edit, Trash2, Save, X, FileEdit } from 'lucide-react';
+import { Upload, FileText, Plus, Download, Edit, Save, X, FileEdit } from 'lucide-react';
 import OnlyOfficeEditor from './OnlyOfficeEditor';
 
 const API_BASE_URL = 'http://192.168.100.244:8080/api/v1';
@@ -203,7 +203,7 @@ const App = () => {
                 a.click();
                 window.URL.revokeObjectURL(url);
                 document.body.removeChild(a);
-                setError('✅ Tạo PDF cải thiện thành công!');
+                setError('Tạo PDF cải thiện thành công!');
                 setTimeout(() => setError(''), 3000);
             } else {
                 console.warn('Enhanced PDF failed, trying standard PDF...');
@@ -211,12 +211,12 @@ const App = () => {
             }
         } catch (err) {
             console.error('Enhanced PDF error:', err);
-            setError('⚠️ PDF cải thiện lỗi, đang thử phương pháp chuẩn...');
+            setError('⚠PDF cải thiện lỗi, đang thử phương pháp chuẩn...');
 
             try {
                 await handleGeneratePdf(form);
             } catch (fallbackErr) {
-                setError('❌ Không thể tạo PDF: ' + fallbackErr.message);
+                setError('Không thể tạo PDF: ' + fallbackErr.message);
             }
         } finally {
             setLoading(false);
